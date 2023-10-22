@@ -14,7 +14,8 @@ use rand::seq::SliceRandom;
 pub struct Person {
     floor_on: i32,
     floor_to: i32,
-    dst_out: Bernoulli
+    dst_out: Bernoulli,
+    is_on_elevator: bool
 }
 
 /** Person constructor function
@@ -35,7 +36,8 @@ pub fn from(p_out: f64, num_floors: i32, mut rng: &mut impl Rng) -> Person {
     Person {
         floor_on: 0_i32,
         floor_to: floor_to,
-        dst_out: Bernoulli::new(p_out).unwrap()
+        dst_out: Bernoulli::new(p_out).unwrap(),
+        is_on_elevator: false
     }
 }
 
@@ -45,8 +47,8 @@ pub fn from(p_out: f64, num_floors: i32, mut rng: &mut impl Rng) -> Person {
  * and are callable via
  *
  * //Example
- * let my_person: Person = person::from(0.5_f64, 5_i32, rng);
- * let is_leaving: bool = my_person.is_leaving(rng);
+ * let my_person: Person = person::from(0.5_f64, 5_i32, &mut rng);
+ * let is_leaving: bool = my_person.is_leaving(&mut rng);
  */
 impl Person {
     /** is_leaving function
@@ -69,12 +71,21 @@ impl Person {
      * Return the is_leaving boolean.
      */
     pub fn is_waiting(&mut self) -> bool {
-        let is_waiting: bool = if self.floor_on != self.floor_to {
+        let is_waiting: bool = if (self.floor_on != self.floor_to) && !self.is_on_elevator {
                 true
             } else {
                 false
             };
         is_waiting
+    }
+
+    /** is_on_elevator function
+     *
+     * Decide whether the person is on the elevator currently.
+     * Return the is_on_elevator boolean.
+     */
+    pub fn is_on_elevator(&mut self) -> bool {
+        self.is_on_elevator
     }
 
     /** get_floor_on function
