@@ -1,6 +1,10 @@
+//Import source modules
+use crate::person::Person;
+
 /** Elevator struct schema
  *
  * An elevator has the following properties
+ * - people (Vec<Person>): A vector listing the people on the elevator
  * - energy_up (f64): Base energy spent per floor when empty & moving up
  * - energy_down (f64): Base energy spent per floor when empty & moving down
  * - energy_coef (f64): Multiplier for calculating energy spent while traveling with people
@@ -9,6 +13,7 @@
  * - stopped (bool): If true, the elevator is stopped, else it is moving
  */
 pub struct Elevator {
+    people: Vec<Person>,
     energy_up: f64,
     energy_down: f64,
     energy_coef: f64,
@@ -26,8 +31,9 @@ pub struct Elevator {
  * The floor_on, moving_up, and stopped attributes are initialized
  * to 0_i32, true, and true respectively.
  */
- pub fn from(energy_up: f64, energy_down: f64, energy_coef: f64) -> Elevator {
+pub fn from(energy_up: f64, energy_down: f64, energy_coef: f64) -> Elevator {
     Elevator {
+        people: Vec::new(),
         energy_up: energy_up,
         energy_down: energy_down,
         energy_coef: energy_coef,
@@ -53,13 +59,13 @@ impl Elevator {
      * Accept the number of people currently on the elevator.
      * Return the total energy spent moving one floor.
      */
-    pub fn get_energy_spent(&mut self, num_people: i32) -> f64 {
+    pub fn get_energy_spent(&mut self) -> f64 {
         let energy_spent = if self.stopped {
                 0.0_f64
             } else if self.moving_up {
-                self.energy_up + (self.energy_coef * (num_people as f64))
+                self.energy_up + (self.energy_coef * (self.people.len() as f64))
             } else {
-                self.energy_down + (self.energy_coef * (num_people as f64))
+                self.energy_down + (self.energy_coef * (self.people.len() as f64))
             };
         energy_spent
     }
@@ -69,7 +75,7 @@ impl Elevator {
      * Determine the floor the elevator is on.
      * Return the floor_on usize.
      */
-     pub fn get_floor_on(&mut self) -> usize {
+    pub fn get_floor_on(&mut self) -> usize {
         self.floor_on
     }
 
@@ -91,20 +97,66 @@ impl Elevator {
         self.moving_up
     }
 
+    /** get_num_people function
+     *
+     * Calculate the number of people on the floor and also on
+     * the elevator as a usize.
+     */
+     pub fn get_num_people(&mut self) -> usize {
+        //Return the length of the people vector as a usize 
+        self.people.len() as usize
+    }
+
+    /** are_people_going_to_floor funciton
+     *
+     * Determine whether there are people going to the given floor
+     * Return a boolean representing this
+     */
+    pub fn are_people_going_to_floor(&mut self, floor_index: usize) -> bool {
+        //Initialize a boolean tracking if people are going to the given floor
+        let mut is_going_to_floor: bool = false;
+
+        //Loop through the people on the elevator and check
+        for pers in self.people.iter_mut() {
+            //If the person is not going to the given floor then skip
+            if pers.get_floor_to() != floor_index {
+                continue;
+            }
+
+            //Otherwise update the boolean and break
+            is_going_to_floor = true;
+            break;
+        }
+
+        //Return the is_going_to_floor boolean
+        is_going_to_floor
+    }
+
     /** update_floor function
      *
      * Update the floor the elevator is on.
      * Increment or decrement the floor_on usize based on whether
      * the elevator is stopped and/or moving up.
      */
-     pub fn update_floor(&mut self) -> usize {
-        self.floor_on = if self.stopped {
-            self.floor_on
-        } else if self.moving_up {
+    pub fn update_floor(&mut self) -> usize {
+        //If the elevator is stopped, then return early
+        if self.stopped {
+            return self.floor_on;
+        }
+
+        //If the elevator is moving then update the floor the elevator is on
+        self.floor_on = if self.moving_up {
             self.floor_on + 1_usize
         } else {
             self.floor_on - 1_usize
         };
+
+        //Loop through the elevator's people and update their floor accordingly
+        for pers in self.people.iter_mut() {
+            pers.set_floor_on(self.floor_on);
+        }
+
+        //Return the floor the elevator is on
         self.floor_on
     }
 
@@ -124,5 +176,62 @@ impl Elevator {
      */
     pub fn set_moving_up(&mut self, is_moving_up: bool) {
         self.moving_up = is_moving_up;
+    }
+
+    /** get_dest_floors function
+     *
+     * Loop through the people on the elevator and calculate each
+     * person's destination floor.  Return a vector of floor indices
+     */
+    pub fn get_dest_floors(&mut self) -> Vec<usize> {
+        //Initialize a vector of usizes for the destination floors
+        let mut dest_floors: Vec<usize> = Vec::new();
+
+        //Loop through the people on the elevator and determine their dest floors
+        for pers in self.people.iter_mut() {
+            let dest_floor: usize = pers.get_floor_to();
+            dest_floors.push(dest_floor);
+        }
+
+        //Return the vector of destination floors
+        dest_floors
+    }
+
+    /** flush_people_leaving_elevator function
+     *
+     * Remove the people on the elevator whose destination
+     * floor is the current floor and return a vector containing
+     * those people.
+     */
+    pub fn flush_people_leaving_elevator(&mut self) -> Vec<Person> {
+        //Initialize a vector of people for the people leaving
+        let mut people_leaving: Vec<Person> = Vec::new();
+
+        //Loop through the people on the elevator and add to the vec
+        let mut removals = 0_usize;
+        for i in 0..self.people.len() {
+            //If the person is not on their destination floor, then skip
+            if self.people[i-removals].get_floor_on() != self.people[i-removals].get_floor_to() {
+                continue;
+            }
+
+            //If the person is on their destination floor, then remove them from
+            //the elevator and add them to the leaving vec, incrementing the removals
+            let mut person_leaving: Person = self.people.remove(i - removals);
+            person_leaving.set_on_elevator(false);
+            people_leaving.push(person_leaving);
+            removals += 1_usize;
+        }
+
+        //Return the vector of people leaving
+        people_leaving
+    }
+}
+
+impl Extend<Person> for Elevator {
+    fn extend<T: IntoIterator<Item=Person>>(&mut self, iter: T) {
+        for pers in iter {
+            self.people.push(pers);
+        }
     }
 }

@@ -1,9 +1,11 @@
 mod person;
 mod elevator;
+mod floor;
 
 //Import source modules
 use crate::person::Person;
 use crate::elevator::Elevator;
+use crate::floor::Floor;
 
 //Import libraries
 use rand::Rng;
@@ -15,10 +17,10 @@ use std::{thread, time};
 fn main() {
     //Initialize the floors
     let num_floors: usize = 4_usize;
-    let mut floors: Vec<Vec<Person>> = {
-        let mut tmp_floors: Vec<Vec<Person>> = Vec::new();
+    let mut floors: Vec<Floor> = {
+        let mut tmp_floors: Vec<Floor> = Vec::new();
         for i in 0_usize..num_floors {
-            let mut tmp_floor: Vec<Person> = Vec::new();
+            let mut tmp_floor: Floor = floor::new();
             tmp_floors.push(tmp_floor);
         }
         tmp_floors
@@ -62,61 +64,35 @@ fn main() {
         //If the elevator is stopped then move people on and off the elevator
         if my_elevator.is_stopped() {
             //Mutable borrow the current floor
-            let mut current_floor: &mut Vec<Person> = &mut floors[floor_index];
+            let mut current_floor: &mut Floor = &mut floors[floor_index];
 
-            //Loop through it and resolve arrivals and departures
-            for (i, waiting_person) in current_floor.iter_mut().enumerate() {
-                //If the person is on the elevator, then check whether they need to get off
-                if waiting_person.is_on_elevator() {
-                    //If so then get the person off the elevator and continue
-                    if waiting_person.get_floor_to() as usize == floor_index {
-                        println!("{} getting off elevator", waiting_person);
-                        waiting_person.set_on_elevator(false);
-                    }
-                    continue;
-                }
+            //Move people off the current floor
+            let people_leaving_floor: Vec<Person> = current_floor.flush_people_entering_elevator();
+            let people_leaving_elevator: Vec<Person> = my_elevator.flush_people_leaving_elevator();
+            my_elevator.extend(people_leaving_floor);
+            current_floor.extend(people_leaving_elevator);
 
-                //If the person is waiting and not on the elevator, then add to elevator
-                if waiting_person.is_waiting() {
-                    println!("{} getting on elevator", waiting_person);
-                    waiting_person.set_on_elevator(true);
-                }
-            }
-
-            //If the current floor is the first floor, then remove anyone who is on the floor
+            //If the current floor is the first floor, then flush the floor
             if floor_index == 0_usize {
-                //Borrow the current floor
-                let current_floor: &mut Vec<Person> = &mut floors[floor_index];
-
-                //Remove anyone who is on the floor after elevator arrivals & departures
-                current_floor.retain_mut(|onboard_person| if onboard_person.is_on_elevator() {
-                    true
-                } else {
-                    println!("{} leaving building", onboard_person);
-                    false
-                });
+                current_floor.flush_people_leaving_floor();
             }
         }
 
         //If stopped and not yet updated, check if people are still on the elevator
         if !elevator_direction_set && my_elevator.is_stopped() {
             //Borrow the current floor
-            let current_floor: &mut Vec<Person> = &mut floors[floor_index];
+            let mut current_floor: &mut Floor = &mut floors[floor_index];
+
+            //Get the destination floors from the elevator
+            let dest_floors: Vec<usize> = my_elevator.get_dest_floors();
 
             //Initialize variables to track the nearest destination floor with and the min
             //distance between here and a destination floor
             let mut nearest_dest_floor: usize = 0_usize;
             let mut min_dest_floor_dist: usize = 0_usize;
 
-            //Check for people waiting
-            for onboard_person in current_floor {
-                //If the person is not on the elevator then continue
-                if !onboard_person.is_on_elevator() {
-                    continue;
-                }
-
-                //Calculate the distance between this floor and the person's dest floor
-                let dest_floor_index: usize = onboard_person.get_floor_to();
+            //Calculate the distance between each dest floor and the current floor
+            for dest_floor_index in dest_floors {
                 let dest_floor_dist: usize = if floor_index > dest_floor_index {
                     floor_index - dest_floor_index
                 } else {
@@ -126,7 +102,6 @@ fn main() {
                 //Check whether this is less than the current minimum, or if no minimum
                 //has been assigned yet (in which case it is 0_usize)
                 if min_dest_floor_dist == 0_usize || dest_floor_dist < min_dest_floor_dist {
-                    println!("{} has nearby floor", onboard_person);
                     min_dest_floor_dist = dest_floor_dist;
                     nearest_dest_floor = dest_floor_index;
                 }
@@ -134,17 +109,15 @@ fn main() {
 
             //If the nearest dest floor is identified, then update the elevator
             if min_dest_floor_dist != 0_usize {
-                //Unstop the elevator
-                elevator_to_stop = false;
+                println!("[{}] Nearest destination floor", nearest_dest_floor);
 
-                //If the nearest dest floor is up then move up, else down
+                //Unstop the elevator and move toward the nearest dest floor
+                elevator_to_stop = false;
                 if nearest_dest_floor > floor_index {
                     elevator_to_move_up = true;
                 } else {
                     elevator_to_move_up = false;
                 }
-
-                //Set the elevator direction set flag
                 elevator_direction_set = true;
             }
         }
@@ -161,17 +134,8 @@ fn main() {
                 //Initialize a variable to track if there are waiting people on this floor
                 let mut is_wait_floor: bool = false;
 
-                //Loop throug the people in the floor until a waiting person is found
-                for person in floor {
-                    //If a waiting person is found then this floor is a waiting floor
-                    if person.is_waiting() && !person.is_on_elevator() {
-                        is_wait_floor = true;
-                        break;
-                    }
-                }
-
-                //If this is not a waiting floor then continue
-                if !is_wait_floor {
+                //Check if there is anyone waiting on the floor, if not then continue
+                if !floor.are_people_waiting() {
                     continue;
                 }
 
@@ -192,17 +156,15 @@ fn main() {
 
             //If the nearest wait floor is identified, then update the elevator
             if min_wait_floor_dist != 0_usize {
-                //Unstop the elevator
-                elevator_to_stop = false;
+                println!("[{}] Nearest floor with waiting people", nearest_wait_floor);
 
-                //If the nearest wait floor is up then move up, else down
+                //Unstop the elevator and move toward the nearest dest floor
+                elevator_to_stop = false;
                 if nearest_wait_floor > floor_index {
                     elevator_to_move_up = true;
                 } else {
                     elevator_to_move_up = false;
                 }
-
-                //Set the elevator direction set flag
                 elevator_direction_set = true;
             }
         }
@@ -222,25 +184,17 @@ fn main() {
         //If the elevator is moving then check for people waiting, if found then stop the elevator
         if !(elevator_direction_set || my_elevator.is_stopped()) {
             //Borrow the current floor
-            let current_floor: &mut Vec<Person> = &mut floors[floor_index];
+            let current_floor: &mut Floor = &mut floors[floor_index];
 
-            //Loop through the current floor and check for people waiting, if found then stop
-            for waiting_person in current_floor {
-                //Check if this person is waiting and not on the elevator
-                if waiting_person.is_waiting() && !waiting_person.is_on_elevator()  {
-                    println!("{} stopping for this person to get on", waiting_person);
-                    elevator_to_stop = true;
-                    elevator_direction_set = true;
-                    break;
-                }
-
-                //Check if the person is on the elevator and this is their destination floor
-                if waiting_person.is_on_elevator() && (waiting_person.get_floor_to() == floor_index)
-                {
-                    println!("{} stopping for this person to get off", waiting_person);
-                    elevator_to_stop = true;
-                    elevator_direction_set = true;
-                }
+            //Check if there are people waiting on the current floor
+            if current_floor.are_people_waiting() {
+                println!("[{}] Stopping for people to get on", floor_index);
+                elevator_to_stop = true;
+                elevator_direction_set = true;
+            } else if my_elevator.are_people_going_to_floor(floor_index) {
+                println!("[{}] Stopping for people to get off", floor_index);
+                elevator_to_stop = true;
+                elevator_direction_set = true;
             }
         }
 
@@ -256,60 +210,20 @@ fn main() {
         }
 
         //Calculate the number of people on the elevator
-        let people_on_elevator: i32 = {
-            //Borrow the current floor
-            let current_floor: &mut Vec<Person> = &mut floors[floor_index];
-
-            //Calculate the floor's length
-            let mut num_on_elevator: i32 = 0_i32;
-            for pers in current_floor.iter_mut() {
-                if !pers.is_on_elevator() {
-                    continue;
-                }
-                num_on_elevator += 1_i32;
-            }
-            num_on_elevator
-        };
+        let people_on_elevator: usize = my_elevator.get_num_people();
 
         //Move the elevator and the people on the elevator from the current floor
-        let new_floor_index = my_elevator.update_floor();
-        let mut tmp_floor: Vec<Person> = Vec::new();
-        if new_floor_index != floor_index {
-            {//Isolate scope for borrow
-                //Borrow the current floor
-                let current_floor: &mut Vec<Person> = &mut floors[floor_index];
-
-                //Drain filter the current floor into the tmp floor
-                let mut removes: usize = 0_usize;
-                for i in 0..current_floor.len() {
-                    if current_floor[i - removes].is_on_elevator() {
-                        let mut pers = current_floor.remove(i - removes);
-                        pers.set_floor_on(new_floor_index);
-                        tmp_floor.push(pers);
-                        removes += 1_usize;
-                    }
-                }
-            }
-            //Borrow the new floor and extend it with the tmp_floor
-            let new_floor: &mut Vec<Person> = &mut floors[new_floor_index];
-            new_floor.extend(tmp_floor);
-        }
+        let _new_floor_index = my_elevator.update_floor();
 
         //Calculate and print the energy spent
-        let energy_spent: f64 = my_elevator.get_energy_spent(people_on_elevator);
+        let energy_spent: f64 = my_elevator.get_energy_spent();
         println!("Energy spent: {}", energy_spent);
 
         //Print the building status
         let mut building_status: String = String::new();
         for (i, floor) in floors.iter_mut().enumerate() {
             //Calculate the number of people on the floor but not on the elevator
-            let mut people_on_floor = 0_i32;
-            for pers in floor.iter_mut() {
-                if pers.is_on_elevator() {
-                    continue;
-                }
-                people_on_floor += 1_i32;
-            }
+            let mut people_on_floor = floor.get_num_people();
 
             //Initialize strings representing this floor
             let mut floor_roof: String = String::from("|---|");
@@ -333,7 +247,7 @@ fn main() {
         println!("{}", building_status);
 
         //Sleep for one second in between time steps
-        let one_sec = time::Duration::from_millis(1500);
+        let one_sec = time::Duration::from_millis(200);
         thread::sleep(one_sec);
     }
 }

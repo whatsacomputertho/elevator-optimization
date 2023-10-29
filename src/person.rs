@@ -16,7 +16,8 @@ pub struct Person {
     floor_on: usize,
     floor_to: usize,
     dst_out: Bernoulli,
-    is_on_elevator: bool
+    is_on_elevator: bool,
+    is_leaving: bool
 }
 
 /** Person constructor function
@@ -38,7 +39,8 @@ pub fn from(p_out: f64, num_floors: usize, mut rng: &mut impl Rng) -> Person {
         floor_on: 0_usize,
         floor_to: floor_to,
         dst_out: Bernoulli::new(p_out).unwrap(),
-        is_on_elevator: false
+        is_on_elevator: false,
+        is_leaving: false
     }
 }
 
@@ -54,22 +56,16 @@ pub fn from(p_out: f64, num_floors: usize, mut rng: &mut impl Rng) -> Person {
 impl Person {
     /** is_leaving function
      *
-     * Decide whether the person is leaving the building.
-     * If so, then update the person's floor_to value to 0.
-     * Then return the is_leaving boolean.
+     * Return the is_leaving boolean.
      */
-    pub fn is_leaving(&mut self, mut rng: &mut impl Rng) -> bool {
-        let is_leaving: bool = self.dst_out.sample(&mut rng);
-        if is_leaving {
-            self.floor_to = 0_usize;
-        }
-        is_leaving
+    pub fn is_leaving(&mut self) -> bool {
+        self.is_leaving
     }
 
     /** is_waiting function
      *
      * Decide whether the person is waiting for an elevator.
-     * Return the is_leaving boolean.
+     * Return a boolean representing this.
      */
     pub fn is_waiting(&mut self) -> bool {
         let is_waiting: bool = if (self.floor_on != self.floor_to) && !self.is_on_elevator {
@@ -105,6 +101,27 @@ impl Person {
      */
     pub fn get_floor_to(&mut self) -> usize {
         self.floor_to
+    }
+
+    /** gen_is_leaving function
+     *
+     * Decide whether the person is leaving the building.
+     * If so, then update the person's floor_to value to 0.
+     * Then return the is_leaving boolean.
+     */
+    pub fn gen_is_leaving(&mut self, mut rng: &mut impl Rng) -> bool {
+        //Check if the is_leaving boolean is true, if so return it
+        if self.is_leaving {
+            return self.is_leaving;
+        }
+
+        //If the person is not leaving, then randomly generate whether they wish to leave
+        let pers_is_leaving: bool = self.dst_out.sample(&mut rng);
+        if pers_is_leaving {
+            self.floor_to = 0_usize;
+            self.is_leaving = pers_is_leaving;
+        }
+        self.is_leaving
     }
 
     /** set_on_elevator function
