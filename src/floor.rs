@@ -4,24 +4,15 @@ use rand::Rng;
 
 //Import source modules
 use crate::person::Person;
+use crate::people::People;
 
 /** Floor struct schema
  *
  * A Floor has the following properties
- * - prop (typ): Description of the property
+ * - people (Vec<Person>): A vector of people currently on the floor
  */
  pub struct Floor {
-    people: Vec<Person>
-}
-
-/** Floor constructor function
- *
- * Initialize a new empty floor.
- */
-pub fn new() -> Floor {
-    Floor {
-        people: Vec::new()
-    }
+    pub people: Vec<Person>
 }
 
 /** Floor type implementation
@@ -31,30 +22,30 @@ pub fn new() -> Floor {
  *
  * //Example
  * let my_floor: Floor = floor::new();
- * let is_leaving: bool = my_person.is_leaving(&mut rng);
+ * let num_people: usize = my_floor.get_num_people_waiting();
  */
 impl Floor {
-    /** get_num_people function
+    /** Floor constructor function
      *
-     * Calculate the number of people on the floor as a usize.
-     * Return the usize tracking the number of people on the floor.
+     * Initialize a new empty floor.
      */
-    pub fn get_num_people(&mut self) -> usize {
-        //Return the length of the people vector as a usize
-        self.people.len() as usize
+    pub fn new() -> Floor {
+        Floor {
+            people: Vec::new()
+        }
     }
 
     /** are_people_waiting function
      *
      * Check if there are any people waiting on the floor
      */
-    pub fn are_people_waiting(&mut self) -> bool {
+    pub fn are_people_waiting(&self) -> bool {
         //Initialize a bool to track if there are people waiting
         let mut is_person_waiting: bool = false;
 
         //Loop through the people on the floor and check if any are waiting
-        for pers in self.people.iter_mut() {
-            if !pers.is_waiting() {
+        for pers in self.people.iter() {
+            if pers.floor_on == pers.floor_to {
                 continue;
             }
 
@@ -71,13 +62,13 @@ impl Floor {
      *
      * Get the number of people waiting on the floor
      */
-    pub fn get_num_people_waiting(&mut self) -> usize {
+    pub fn get_num_people_waiting(&self) -> usize {
         //Initialize a usize to track the number of people waiting
         let mut num_people_waiting: usize = 0_usize;
 
         //Loop through the people on the floor and check if they are waiting
-        for pers in self.people.iter_mut() {
-            if !pers.is_waiting() {
+        for pers in self.people.iter() {
+            if pers.floor_on == pers.floor_to {
                 continue;
             }
             num_people_waiting += 1_usize;
@@ -112,14 +103,13 @@ impl Floor {
         let mut removals = 0_usize;
         for i in 0..self.people.len() {
             //If the person is not waiting, then skip
-            if !self.people[i-removals].is_waiting() {
+            if self.people[i-removals].floor_on == self.people[i-removals].floor_to {
                 continue;
             }
 
             //If the person is waiting, then remove them from the elevator
             //and add them to the leaving vec, incrementing the removals
             let mut person_entering_elevator: Person = self.people.remove(i - removals);
-            person_entering_elevator.set_on_elevator(true);
             people_entering_elevator.push(person_entering_elevator);
             removals += 1_usize;
         }
@@ -138,8 +128,7 @@ impl Floor {
      */
     pub fn flush_people_leaving_floor(&mut self) {
         //Loop through the floor and determine if anyone is leaving
-        self.people.retain_mut(|pers| if pers.is_leaving() {
-            println!("{} leaving building", pers);
+        self.people.retain_mut(|pers| if pers.is_leaving {
             false
         } else {
             false
@@ -147,10 +136,33 @@ impl Floor {
     }
 }
 
+//Implement the extend trait for the floor struct
 impl Extend<Person> for Floor {
     fn extend<T: IntoIterator<Item=Person>>(&mut self, iter: T) {
         for pers in iter {
             self.people.push(pers);
         }
+    }
+}
+
+//Implement the people trait for the floor struct
+impl People for Floor {
+    /** get_dest_floors function
+     *
+     * Loop through the people on the floor and calculate each
+     * person's destination floor.  Return a vector of floor indices
+     */
+    fn get_dest_floors(&self) -> Vec<usize> {
+        //Return the destination floors of the people on the floor
+        self.people.get_dest_floors()
+    }
+
+    /** are_people_going_to_floor funciton
+     *
+     * Determine whether there are people going to the given floor
+     * Return a boolean representing this
+     */
+    fn are_people_going_to_floor(&self, floor_index: usize) -> bool {
+        self.people.are_people_going_to_floor(floor_index)
     }
 }

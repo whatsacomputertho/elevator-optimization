@@ -1,46 +1,26 @@
 //Import source modules
 use crate::person::Person;
+use crate::people::People;
 
 /** Elevator struct schema
  *
  * An elevator has the following properties
+ * - floor_on (usize): The floor that the elevator is currently on
+ * - moving_up (bool): If true, the elevator is moving up, else it is moving down
+ * - stopped (bool): If true, the elevator is stopped, else it is moving
  * - people (Vec<Person>): A vector listing the people on the elevator
  * - energy_up (f64): Base energy spent per floor when empty & moving up
  * - energy_down (f64): Base energy spent per floor when empty & moving down
  * - energy_coef (f64): Multiplier for calculating energy spent while traveling with people
- * - floor_on (usize): The floor that the elevator is currently on
- * - moving_up (bool): If true, the elevator is moving up, else it is moving down
- * - stopped (bool): If true, the elevator is stopped, else it is moving
  */
 pub struct Elevator {
-    people: Vec<Person>,
+    pub floor_on: usize,
+    pub moving_up: bool,
+    pub stopped: bool,
+    pub people: Vec<Person>,
     energy_up: f64,
     energy_down: f64,
-    energy_coef: f64,
-    floor_on: usize,
-    moving_up: bool,
-    stopped: bool
-}
-
-/** Elevator constructor function
- *
- * Initialize an elevator given its energy values, those being
- * energy spent traveling up and down, as well as the energy
- * coefficient/multiplier for when people are on the elevator
- *
- * The floor_on, moving_up, and stopped attributes are initialized
- * to 0_i32, true, and true respectively.
- */
-pub fn from(energy_up: f64, energy_down: f64, energy_coef: f64) -> Elevator {
-    Elevator {
-        people: Vec::new(),
-        energy_up: energy_up,
-        energy_down: energy_down,
-        energy_coef: energy_coef,
-        floor_on: 0_usize,
-        moving_up: false,
-        stopped: true
-    }
+    energy_coef: f64
 }
 
 /** Elevator type implementation
@@ -53,6 +33,27 @@ pub fn from(energy_up: f64, energy_down: f64, energy_coef: f64) -> Elevator {
  * let is_leaving: bool = my_person.is_leaving(&mut rng);
  */
 impl Elevator {
+    /** Elevator constructor function
+     *
+     * Initialize an elevator given its energy values, those being
+     * energy spent traveling up and down, as well as the energy
+     * coefficient/multiplier for when people are on the elevator
+     *
+     * The floor_on, moving_up, and stopped attributes are initialized
+     * to 0_i32, true, and true respectively.
+     */
+    pub fn from(energy_up: f64, energy_down: f64, energy_coef: f64) -> Elevator {
+        Elevator {
+            floor_on: 0_usize,
+            moving_up: false,
+            stopped: true,
+            people: Vec::new(),
+            energy_up: energy_up,
+            energy_down: energy_down,
+            energy_coef: energy_coef
+        }
+    }
+    
     /** get_energy_spent function
      *
      * Calculate the energy spent while the elevator is moving.
@@ -68,68 +69,6 @@ impl Elevator {
                 self.energy_down + (self.energy_coef * (self.people.len() as f64))
             };
         energy_spent
-    }
-
-    /** get_floor_on function
-     *
-     * Determine the floor the elevator is on.
-     * Return the floor_on usize.
-     */
-    pub fn get_floor_on(&mut self) -> usize {
-        self.floor_on
-    }
-
-    /** is_stopped function
-     *
-     * Determine whether the elevator is stopped.
-     * Return the stopped boolean.
-     */
-    pub fn is_stopped(&mut self) -> bool {
-        self.stopped
-    }
-
-    /** is_moving_up function
-     *
-     * Determine whether the elevator is moving up.
-     * Return the moving_up boolean.
-     */
-    pub fn is_moving_up(&mut self) -> bool {
-        self.moving_up
-    }
-
-    /** get_num_people function
-     *
-     * Calculate the number of people on the floor and also on
-     * the elevator as a usize.
-     */
-     pub fn get_num_people(&mut self) -> usize {
-        //Return the length of the people vector as a usize 
-        self.people.len() as usize
-    }
-
-    /** are_people_going_to_floor funciton
-     *
-     * Determine whether there are people going to the given floor
-     * Return a boolean representing this
-     */
-    pub fn are_people_going_to_floor(&mut self, floor_index: usize) -> bool {
-        //Initialize a boolean tracking if people are going to the given floor
-        let mut is_going_to_floor: bool = false;
-
-        //Loop through the people on the elevator and check
-        for pers in self.people.iter_mut() {
-            //If the person is not going to the given floor then skip
-            if pers.get_floor_to() != floor_index {
-                continue;
-            }
-
-            //Otherwise update the boolean and break
-            is_going_to_floor = true;
-            break;
-        }
-
-        //Return the is_going_to_floor boolean
-        is_going_to_floor
     }
 
     /** update_floor function
@@ -153,48 +92,52 @@ impl Elevator {
 
         //Loop through the elevator's people and update their floor accordingly
         for pers in self.people.iter_mut() {
-            pers.set_floor_on(self.floor_on);
+            pers.floor_on = self.floor_on;
         }
 
         //Return the floor the elevator is on
         self.floor_on
     }
-
-    /** set_stopped function
+    
+    /** get_nearest_dest_floor function
      *
-     * Set whether the elevator is stopped.
-     * Update the stopped bool with the input bool.
+     * Check the elevator for people, if found then find the nearest
+     * destination floor to the elevator's current floor among those
+     * people.  Return a tuple with the floor and the distance to it.
      */
-    pub fn set_stopped(&mut self, is_stopped: bool) {
-        self.stopped = is_stopped;
-    }
+    pub fn get_nearest_dest_floor(&self) -> (usize, usize) {
+        //Get the current floor the elevator is on
+        let floor_index: usize = self.floor_on;
 
-    /** set_moving_up function
-     *
-     * Set whether the elevator is moving up.
-     * Update the moving_up bool with the input bool.
-     */
-    pub fn set_moving_up(&mut self, is_moving_up: bool) {
-        self.moving_up = is_moving_up;
-    }
-
-    /** get_dest_floors function
-     *
-     * Loop through the people on the elevator and calculate each
-     * person's destination floor.  Return a vector of floor indices
-     */
-    pub fn get_dest_floors(&mut self) -> Vec<usize> {
-        //Initialize a vector of usizes for the destination floors
-        let mut dest_floors: Vec<usize> = Vec::new();
-
-        //Loop through the people on the elevator and determine their dest floors
-        for pers in self.people.iter_mut() {
-            let dest_floor: usize = pers.get_floor_to();
-            dest_floors.push(dest_floor);
+        //Get the destination floors from the elevator, if none then return
+        let dest_floors: Vec<usize> = self.get_dest_floors();
+        if dest_floors.len() == 0_usize {
+            return (0_usize, 0_usize);
         }
 
-        //Return the vector of destination floors
-        dest_floors
+        //Initialize variables to track the nearest destination floor
+        //and the min distance between here and a destination floor
+        let mut nearest_dest_floor: usize = 0_usize;
+        let mut min_dest_floor_dist: usize = 0_usize;
+
+        //Calculate the distance between each dest floor and the current floor
+        for dest_floor_index in dest_floors.iter() {
+            let dest_floor_dist: usize = if floor_index > *dest_floor_index {
+                floor_index - dest_floor_index
+            } else {
+                dest_floor_index - floor_index
+            };
+
+            //Check whether this is less than the current minimum, or if no
+            //minimum has been assigned yet (in which case it is 0_usize)
+            if min_dest_floor_dist == 0_usize || dest_floor_dist < min_dest_floor_dist {
+                min_dest_floor_dist = dest_floor_dist;
+                nearest_dest_floor = *dest_floor_index;
+            }
+        }
+
+        //Return the nearest destination floor
+        (nearest_dest_floor, min_dest_floor_dist)
     }
 
     /** flush_people_leaving_elevator function
@@ -211,14 +154,13 @@ impl Elevator {
         let mut removals = 0_usize;
         for i in 0..self.people.len() {
             //If the person is not on their destination floor, then skip
-            if self.people[i-removals].get_floor_on() != self.people[i-removals].get_floor_to() {
+            if self.people[i-removals].floor_on != self.people[i-removals].floor_to {
                 continue;
             }
 
             //If the person is on their destination floor, then remove them from
             //the elevator and add them to the leaving vec, incrementing the removals
             let mut person_leaving: Person = self.people.remove(i - removals);
-            person_leaving.set_on_elevator(false);
             people_leaving.push(person_leaving);
             removals += 1_usize;
         }
@@ -228,10 +170,33 @@ impl Elevator {
     }
 }
 
+//Implement the extend trait for the elevator struct
 impl Extend<Person> for Elevator {
     fn extend<T: IntoIterator<Item=Person>>(&mut self, iter: T) {
         for pers in iter {
             self.people.push(pers);
         }
+    }
+}
+
+//Implement the people trait for the elevator struct
+impl People for Elevator {
+    /** get_dest_floors function
+     *
+     * Loop through the people on the elevator and calculate each
+     * person's destination floor.  Return a vector of floor indices
+     */
+    fn get_dest_floors(&self) -> Vec<usize> {
+        //Return the destination floors of the people on the elevator
+        self.people.get_dest_floors()
+    }
+
+    /** are_people_going_to_floor funciton
+     *
+     * Determine whether there are people going to the given floor
+     * Return a boolean representing this
+     */
+    fn are_people_going_to_floor(&self, floor_index: usize) -> bool {
+        self.people.are_people_going_to_floor(floor_index)
     }
 }
