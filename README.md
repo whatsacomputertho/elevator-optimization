@@ -2,6 +2,8 @@
 
 Recently I was in the office talking about fun project ideas with some coworkers, and this idea came up as a fun one that could get complex quickly depending on the approach.  This is also my attempt to kill two birds with one stone and attempt to learn a new language while also tackling a fun problem.
 
+![Command-line display](doc/assets/display.gif)
+
 ## Problem statement
 
 Essentially, the idea is to identify the optimal resting floor for an elevator platform based on inflow and outflow of a building with potentially many elevators and many floors.  The elevator can be optimized along differing dimensions as well, whether that is energy efficiency, wait time, or perhaps some other dimension we haven't yet considered.
