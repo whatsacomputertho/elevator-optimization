@@ -12,7 +12,7 @@ use crate::people::People;
  * - people (Vec<Person>): A vector of people currently on the floor
  */
  pub struct Floor {
-    pub people: Vec<Person>
+    people: Vec<Person>
 }
 
 /** Floor type implementation
@@ -33,29 +33,6 @@ impl Floor {
         Floor {
             people: Vec::new()
         }
-    }
-
-    /** are_people_waiting function
-     *
-     * Check if there are any people waiting on the floor
-     */
-    pub fn are_people_waiting(&self) -> bool {
-        //Initialize a bool to track if there are people waiting
-        let mut is_person_waiting: bool = false;
-
-        //Loop through the people on the floor and check if any are waiting
-        for pers in self.people.iter() {
-            if pers.floor_on == pers.floor_to {
-                continue;
-            }
-
-            //Break if waiting person is found
-            is_person_waiting = true;
-            break;
-        }
-
-        //Return the boolean tracking if there is someone waiting
-        is_person_waiting
     }
 
     /** get_num_people_waiting function
@@ -149,20 +126,89 @@ impl Extend<Person> for Floor {
 impl People for Floor {
     /** get_dest_floors function
      *
-     * Loop through the people on the floor and calculate each
-     * person's destination floor.  Return a vector of floor indices
+     * Call the people vec implementation of the function and return
+     * the result.
      */
     fn get_dest_floors(&self) -> Vec<usize> {
-        //Return the destination floors of the people on the floor
         self.people.get_dest_floors()
+    }
+
+    /** get_num_people function
+     *
+     * Call the people vec implementation of the function and return
+     * the result.
+     */
+    fn get_num_people(&self) -> usize {
+        self.people.get_num_people()
+    }
+
+    /** get_num_people_waiting function
+     *
+     * Call the people vec implementation of the function and return
+     * the result.
+     */
+    fn get_num_people_waiting(&self) -> usize {
+        self.people.get_num_people_waiting()
+    }
+
+    /** get_aggregate_wait_time function
+     *
+     * Call the people vec implementation of the function and return
+     * the result.
+     */
+    fn get_aggregate_wait_time(&self) -> usize {
+        self.people.get_aggregate_wait_time()
     }
 
     /** are_people_going_to_floor funciton
      *
-     * Determine whether there are people going to the given floor
-     * Return a boolean representing this
+     * Call the people vec implementation of the function and return
+     * the result.
      */
     fn are_people_going_to_floor(&self, floor_index: usize) -> bool {
         self.people.are_people_going_to_floor(floor_index)
+    }
+
+    /** are_people_waiting funciton
+     *
+     * Call the people vec implementation of the function and return
+     * the result.
+     */
+    fn are_people_waiting(&self) -> bool {
+        self.people.are_people_waiting()
+    }
+
+    /** increment_wait_times funciton
+     *
+     * Only increment the wait times of people who are waiting
+     */
+    fn increment_wait_times(&mut self) {
+        //Loop through the people
+        for pers in self.people.iter_mut() {
+            //If the person is not waiting, then skip
+            if pers.floor_on == pers.floor_to {
+                continue;
+            }
+
+            //Increment the person's wait time if they are waiting
+            pers.increment_wait_time();
+        }
+    }
+
+    /** reset_wait_times funciton
+     *
+     * Only reset the wait times of people who are not waiting
+     */
+    fn reset_wait_times(&mut self) {
+        //Loop through the people
+        for pers in self.people.iter_mut() {
+            //If the person is waiting, then skip
+            if pers.floor_on != pers.floor_to {
+                continue;
+            }
+
+            //Reset the person's wait time if they are not waiting
+            pers.reset_wait_time();
+        }
     }
 }
