@@ -183,20 +183,73 @@ impl Extend<Person> for Elevator {
 impl People for Elevator {
     /** get_dest_floors function
      *
-     * Loop through the people on the elevator and calculate each
-     * person's destination floor.  Return a vector of floor indices
+     * Call the people vec implementation of the function and return
+     * the result.
      */
     fn get_dest_floors(&self) -> Vec<usize> {
-        //Return the destination floors of the people on the elevator
         self.people.get_dest_floors()
+    }
+
+    /** get_num_people function
+     *
+     * Call the people vec implementation of the function and return
+     * the result.
+     */
+    fn get_num_people(&self) -> usize {
+        self.people.get_num_people()
+    }
+
+    /** get_num_people_waiting function
+     *
+     * Call the people vec implementation of the function and return
+     * the result.
+     */
+    fn get_num_people_waiting(&self) -> usize {
+        self.people.get_num_people_waiting()
+    }
+
+    /** get_aggregate_wait_time function
+     *
+     * Call the people vec implementation of the function and return
+     * the result.
+     */
+    fn get_aggregate_wait_time(&self) -> usize {
+        self.people.get_aggregate_wait_time()
+    }
+
+    /** are_people_waiting funciton
+     *
+     * Call the people vec implementation of the function and return
+     * the result.
+     */
+    fn are_people_waiting(&self) -> bool {
+        self.people.are_people_waiting()
     }
 
     /** are_people_going_to_floor funciton
      *
-     * Determine whether there are people going to the given floor
-     * Return a boolean representing this
+     * Call the people vec implementation of the function and return
+     * the result.
      */
     fn are_people_going_to_floor(&self, floor_index: usize) -> bool {
         self.people.are_people_going_to_floor(floor_index)
+    }
+
+    /** increment_wait_times funciton
+     *
+     * Call the people vec implementation of the function and return
+     * the result.
+     */
+    fn increment_wait_times(&mut self) {
+        self.people.increment_wait_times()
+    }
+
+    /** reset_wait_times funciton
+     *
+     * Call the people vec implementation of the function and return
+     * the result.
+     */
+    fn reset_wait_times(&mut self) {
+        self.people.reset_wait_times()
     }
 }

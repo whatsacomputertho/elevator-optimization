@@ -14,6 +14,7 @@ pub struct Person {
     pub floor_on: usize,
     pub floor_to: usize,
     pub is_leaving: bool,
+    pub wait_time: usize,
     dst_out: Bernoulli
 }
 
@@ -46,6 +47,7 @@ impl Person {
             floor_on: 0_usize,
             floor_to: floor_to,
             is_leaving: false,
+            wait_time: 0_usize,
             dst_out: Bernoulli::new(p_out).unwrap()
         }
     }
@@ -69,6 +71,25 @@ impl Person {
             self.is_leaving = pers_is_leaving;
         }
         self.is_leaving
+    }
+
+    /** increment_wait_time function
+     *
+     * Increment the person's wait time counter
+     */
+    pub fn increment_wait_time(&mut self) {
+        //Increment the person's wait time counter
+        self.wait_time += 1_usize;
+    }
+
+    /** reset_wait_time function
+     *
+     * Reset the person's wait time counter, presumably
+     * once they reach their destination floor.
+     */
+    pub fn reset_wait_time(&mut self) {
+        //Reset the person's wait time counter
+        self.wait_time = 0_usize;
     }
 }
 
