@@ -16,6 +16,7 @@ use crate::cli::ElevatorCli;
 //Import libraries
 use rand::Rng;
 use rand::distributions::{Distribution, Standard, Uniform, Bernoulli};
+use statrs::distribution::Poisson;
 use rand::seq::SliceRandom;
 use std::{thread, time};
 use std::io::{Write, stdout};
@@ -73,8 +74,10 @@ fn main() {
 
         //Print the rendered building status
         let building_str: String = String::from(building.to_string());
+        let dest_probs: String = building.get_dest_probabilities().into_iter().map(|i| i.to_string()).collect::<String>();;
         let building_str_len = building_str.matches("\n").count() as u16;
         stdout.write_all(building_str.as_bytes());
+        stdout.write_all(format!("Destination probabilities:\t{}", dest_probs).as_bytes());
         stdout.flush().unwrap();
 
         //Sleep for one second in between time steps
@@ -83,7 +86,7 @@ fn main() {
 
         //Reset the cursor and clear the previous console output
         if i < time_steps - 1 {
-            stdout.queue(cursor::MoveUp(building_str_len)).unwrap();
+            stdout.queue(cursor::MoveUp(building_str_len + 1)).unwrap();
             stdout.queue(cursor::MoveToColumn(0)).unwrap();
             stdout.queue(terminal::Clear(terminal::ClearType::FromCursorDown)).unwrap();
         }
