@@ -15,6 +15,7 @@ pub struct Person {
     pub floor_to: usize,
     pub is_leaving: bool,
     pub wait_time: usize,
+    pub p_out: f64,
     dst_out: Bernoulli
 }
 
@@ -48,6 +49,7 @@ impl Person {
             floor_to: floor_to,
             is_leaving: false,
             wait_time: 0_usize,
+            p_out: p_out,
             dst_out: Bernoulli::new(p_out).unwrap()
         }
     }

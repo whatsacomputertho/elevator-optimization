@@ -10,9 +10,11 @@ use crate::people::People;
  *
  * A Floor has the following properties
  * - people (Vec<Person>): A vector of people currently on the floor
+ * - dest_prob (f64): The probability that this floor is a destination
  */
- pub struct Floor {
-    people: Vec<Person>
+pub struct Floor {
+    people: Vec<Person>,
+    pub dest_prob: f64
 }
 
 /** Floor type implementation
@@ -31,28 +33,51 @@ impl Floor {
      */
     pub fn new() -> Floor {
         Floor {
-            people: Vec::new()
+            people: Vec::new(),
+            dest_prob: 0_f64
         }
     }
 
-    /** get_num_people_waiting function
+    /** get_p_out function
      *
-     * Get the number of people waiting on the floor
+     * Calculate the probability that at least one person on this floor
+     * will decide to leave next time step
      */
-    pub fn get_num_people_waiting(&self) -> usize {
-        //Initialize a usize to track the number of people waiting
-        let mut num_people_waiting: usize = 0_usize;
-
-        //Loop through the people on the floor and check if they are waiting
-        for pers in self.people.iter() {
-            if pers.floor_on == pers.floor_to {
-                continue;
-            }
-            num_people_waiting += 1_usize;
+    pub fn get_p_out(&self) -> f64 {
+        //If there is no one on the floor, return 0_f64
+        if self.people.len() == 0 {
+            return 0_f64;
         }
 
-        //Return the number of people waiting
-        num_people_waiting
+        //Initialize a p_out variable and a vec for each p_out
+        let mut p_out: f64 = 0_f64;
+        let mut past_p_outs: Vec<f64> = Vec::new();
+
+        //Loop through the people in the floor and iteratively calculate
+        //the p_out value
+        for pers in self.people.iter() {
+            //Calculate the product of each of the past people's inverse
+            //p_out values
+            let inverse_p_outs: f64 = {
+                let mut tmp_inverse_p_outs: f64 = 1_f64;
+                for past_p_out in &past_p_outs {
+                    tmp_inverse_p_outs = tmp_inverse_p_outs * (1_f64 - past_p_out);
+                }
+                tmp_inverse_p_outs
+            };
+
+            //Calculate the summand value based on the person's p_out and
+            //the product of each of the past people's p_out values
+            let tmp_p_out: f64 = pers.p_out * inverse_p_outs;
+
+            //Add the newly calculated value onto the p_out value and then
+            //append the current p_out
+            p_out += tmp_p_out;
+            past_p_outs.push(pers.p_out);
+        }
+
+        //Return the p_out value
+        p_out
     }
 
     /** gen_people_leaving function
@@ -63,6 +88,12 @@ impl Floor {
     pub fn gen_people_leaving(&mut self, mut rng: &mut impl Rng) {
         //Loop through the people on the floor and decide if they are leaving
         for pers in self.people.iter_mut() {
+            //Skip people who are waiting for the elevator
+            if pers.floor_on != pers.floor_to {
+                continue;
+            }
+
+            //Randomly generate whether someone not waiting for the elevator will leave
             let _is_person_leaving: bool = pers.gen_is_leaving(rng);
         }
     }
@@ -108,7 +139,7 @@ impl Floor {
         self.people.retain_mut(|pers| if pers.is_leaving {
             false
         } else {
-            false
+            true
         });
     }
 }
