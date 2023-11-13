@@ -137,15 +137,34 @@ impl Building {
 
     /** get_dest_probabilities function
      *
-     * Loop through each floor and calculate the probability that
-     * that floor becomes a waiting floor next time step.
+     * Loop through each floor and get each floor's dest_prob
      */
     pub fn get_dest_probabilities(&self) -> Vec<f64> {
-        //Initialize a vector of f64 values
+        //Initialize a new vec of f64s
         let mut dest_probabilities: Vec<f64> = Vec::new();
 
         //Loop through the floors
-        for (i, floor) in self.floors.iter().enumerate() {
+        for floor in self.floors.iter() {
+            //Push the floor's dest_prob value into the vector
+            dest_probabilities.push(floor.dest_prob);
+        }
+
+        //Return the vector
+        dest_probabilities
+    }
+
+    /** update_dest_probabilities function
+     *
+     * Loop through each floor and calculate the probability that
+     * that floor becomes a waiting floor next time step.  Then set
+     * the dest_prob attribute for each floor with the value.
+     */
+    pub fn update_dest_probabilities(&mut self) {
+        //Get the number of floors in the building
+        let num_floors = self.floors.len();
+
+        //Loop through the floors
+        for (i, floor) in self.floors.iter_mut().enumerate() {
             //Initialize an f64 for this floor's probability
             let mut dest_probability: f64 = 0_f64;
 
@@ -153,11 +172,15 @@ impl Building {
             //based on arrival probability only
             if i == 0 {
                 dest_probability = {
-                    let people_waiting: f64 = if self.elevator.are_people_going_to_floor(i) { 1_f64 } else { 0_f64 };
-                    let p_in: f64 = self.p_in * ((self.floors.len() as f64 - 1_f64)/(self.floors.len() as f64));
+                    let people_waiting: f64 = {
+                        let waiting: f64 = if floor.are_people_waiting() { 1_f64 } else { 0_f64 };
+                        let going: f64 = if self.elevator.are_people_going_to_floor(i) { 1_f64 } else { 0_f64 };
+                        if waiting > going { waiting } else { going }
+                    };
+                    let p_in: f64 = self.p_in * ((num_floors as f64 - 1_f64)/(num_floors as f64));
                     if people_waiting > p_in { people_waiting } else { p_in }
                 };
-                dest_probabilities.push(dest_probability);
+                floor.dest_prob = dest_probability;
                 continue;
             }
 
@@ -166,18 +189,15 @@ impl Building {
             //people and append it to the list
             dest_probability = {
                 let people_waiting: f64 = {
-                    let waiting: f64 = if self.floors[i].are_people_waiting() { 1_f64 } else { 0_f64 };
+                    let waiting: f64 = if floor.are_people_waiting() { 1_f64 } else { 0_f64 };
                     let going: f64 = if self.elevator.are_people_going_to_floor(i) { 1_f64 } else { 0_f64 };
                     if waiting > going { waiting } else { going }
                 };
-                let p_out: f64 = self.floors[i].get_p_out();
+                let p_out: f64 = floor.get_p_out();
                 if people_waiting > p_out { people_waiting } else { p_out }
             };
-            dest_probabilities.push(dest_probability);
+            floor.dest_prob = dest_probability;
         }
-
-        //Return the vector
-        dest_probabilities
     }
 
     /** gen_people_arriving function
@@ -247,11 +267,14 @@ impl Building {
         //Extend the current floor and elevator with the people getting on and off
         self.elevator.extend(people_leaving_floor);
         self.floors[floor_index].extend(people_leaving_elevator);
+    }
 
-        //If the current floor is the first floor, then flush the floor
-        if floor_index == 0_usize {
-            self.floors[floor_index].flush_people_leaving_floor();
-        }
+    /** flush_first_floor function
+     *
+     * Clear the first floor of anyone waiting to leave the building.
+     */
+    pub fn flush_first_floor(&mut self) {
+        self.floors[0].flush_people_leaving_floor();
     }
 
     /** update_average_energy function
@@ -285,8 +308,8 @@ impl fmt::Display for Building {
         let mut building_status: String = String::new();
         for (i, floor) in self.floors.iter().enumerate() {
             //Initialize strings representing this floor
-            let mut floor_roof: String = String::from("|---|");
-            let mut floor_body: String = format!("| {} |", floor.get_num_people());
+            let mut floor_roof: String = String::from("      |---|");
+            let mut floor_body: String = format!(" {:.2} | {} |", floor.dest_prob, floor.get_num_people());
 
             //If this floor has people waiting, then color it yellow
             if floor.are_people_waiting() {

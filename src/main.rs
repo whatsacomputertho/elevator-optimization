@@ -51,6 +51,7 @@ fn main() {
         //Generate people arriving and update the elevator
         building.gen_people_arriving(&mut rng);
         building.gen_people_leaving(&mut rng);
+        building.flush_first_floor();
         let direction: i32 = update_elevator(&mut building);
 
         //Update the elevator based on the direction
@@ -67,26 +68,25 @@ fn main() {
         //Move the elevator and the people on the elevator from the current floor
         let _new_floor_index = building.elevator.update_floor();
 
-        //Increment the wait times and update the average energy
+        //Increment the wait times, update average energy, update dest probabilities
         let energy_spent: f64 = building.elevator.get_energy_spent();
         building.increment_wait_times();
         building.update_average_energy(i, energy_spent);
+        building.update_dest_probabilities();
 
         //Print the rendered building status
         let building_str: String = String::from(building.to_string());
-        let dest_probs: String = building.get_dest_probabilities().into_iter().map(|i| i.to_string()).collect::<String>();;
         let building_str_len = building_str.matches("\n").count() as u16;
         stdout.write_all(building_str.as_bytes());
-        stdout.write_all(format!("Destination probabilities:\t{}", dest_probs).as_bytes());
         stdout.flush().unwrap();
 
         //Sleep for one second in between time steps
-        let one_sec = time::Duration::from_millis(100_u64);
+        let one_sec = time::Duration::from_millis(1000_u64);
         thread::sleep(one_sec);
 
         //Reset the cursor and clear the previous console output
         if i < time_steps - 1 {
-            stdout.queue(cursor::MoveUp(building_str_len + 1)).unwrap();
+            stdout.queue(cursor::MoveUp(building_str_len)).unwrap();
             stdout.queue(cursor::MoveToColumn(0)).unwrap();
             stdout.queue(terminal::Clear(terminal::ClearType::FromCursorDown)).unwrap();
         }

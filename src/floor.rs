@@ -10,9 +10,11 @@ use crate::people::People;
  *
  * A Floor has the following properties
  * - people (Vec<Person>): A vector of people currently on the floor
+ * - dest_prob (f64): The probability that this floor is a destination
  */
 pub struct Floor {
-    people: Vec<Person>
+    people: Vec<Person>,
+    pub dest_prob: f64
 }
 
 /** Floor type implementation
@@ -31,7 +33,8 @@ impl Floor {
      */
     pub fn new() -> Floor {
         Floor {
-            people: Vec::new()
+            people: Vec::new(),
+            dest_prob: 0_f64
         }
     }
 
@@ -85,6 +88,12 @@ impl Floor {
     pub fn gen_people_leaving(&mut self, mut rng: &mut impl Rng) {
         //Loop through the people on the floor and decide if they are leaving
         for pers in self.people.iter_mut() {
+            //Skip people who are waiting for the elevator
+            if pers.floor_on != pers.floor_to {
+                continue;
+            }
+
+            //Randomly generate whether someone not waiting for the elevator will leave
             let _is_person_leaving: bool = pers.gen_is_leaving(rng);
         }
     }
@@ -130,7 +139,7 @@ impl Floor {
         self.people.retain_mut(|pers| if pers.is_leaving {
             false
         } else {
-            false
+            true
         });
     }
 }
