@@ -1,8 +1,7 @@
 //Import libraries
 use std::fmt;
 use rand::Rng;
-use rand::distributions::{Distribution, Standard, Uniform, Bernoulli};
-use rand::seq::SliceRandom;
+use rand::distributions::{Distribution, Uniform, Bernoulli};
 
 /** Person struct schema
  *
@@ -43,7 +42,7 @@ impl Person {
      */
     pub fn from(p_out: f64, num_floors: usize, mut rng: &mut impl Rng) -> Person {
         let dst_to = Uniform::new(0_usize, num_floors);
-        let mut floor_to: usize = dst_to.sample(&mut rng);
+        let floor_to: usize = dst_to.sample(&mut rng);
         Person {
             floor_on: 0_usize,
             floor_to: floor_to,

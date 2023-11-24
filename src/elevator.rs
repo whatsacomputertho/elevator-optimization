@@ -150,6 +150,11 @@ impl Elevator {
         //Initialize a vector of people for the people leaving
         let mut people_leaving: Vec<Person> = Vec::new();
 
+        //If the elevator is not stopped then return the empty vector
+        if !self.stopped {
+            return people_leaving;
+        }
+
         //Loop through the people on the elevator and add to the vec
         let mut removals = 0_usize;
         for i in 0..self.people.len() {
@@ -160,7 +165,7 @@ impl Elevator {
 
             //If the person is on their destination floor, then remove them from
             //the elevator and add them to the leaving vec, incrementing the removals
-            let mut person_leaving: Person = self.people.remove(i - removals);
+            let person_leaving: Person = self.people.remove(i - removals);
             people_leaving.push(person_leaving);
             removals += 1_usize;
         }
