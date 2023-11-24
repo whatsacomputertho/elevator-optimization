@@ -20,5 +20,11 @@ use clap::{Parser};
 )]
 pub struct ElevatorCli {
     #[arg(long="floors")]
-    pub floors: Option<usize>
+    pub floors: Option<usize>,
+
+    #[arg(long="elevators")]
+    pub elevators: Option<usize>,
+
+    #[arg(long="expected-arrivals")]
+    pub arrivals: Option<f64>
 }

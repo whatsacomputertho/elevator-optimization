@@ -1,5 +1,4 @@
 //Import external/standard modules
-use std::fmt;
 use rand::Rng;
 
 //Import source modules
@@ -85,7 +84,7 @@ impl Floor {
      * Generate the people on the floor who are leaving using
      * each person's gen_is_leaving function
      */
-    pub fn gen_people_leaving(&mut self, mut rng: &mut impl Rng) {
+    pub fn gen_people_leaving(&mut self, rng: &mut impl Rng) {
         //Loop through the people on the floor and decide if they are leaving
         for pers in self.people.iter_mut() {
             //Skip people who are waiting for the elevator
@@ -117,7 +116,7 @@ impl Floor {
 
             //If the person is waiting, then remove them from the elevator
             //and add them to the leaving vec, incrementing the removals
-            let mut person_entering_elevator: Person = self.people.remove(i - removals);
+            let person_entering_elevator: Person = self.people.remove(i - removals);
             people_entering_elevator.push(person_entering_elevator);
             removals += 1_usize;
         }
