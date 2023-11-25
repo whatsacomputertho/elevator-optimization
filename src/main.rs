@@ -6,13 +6,14 @@ mod elevators;
 mod floor;
 mod floors;
 mod cli;
+mod controller;
 
 //Import source modules
-use crate::people::People;
 use crate::building::Building;
 use crate::elevators::Elevators;
 use crate::floors::Floors;
 use crate::cli::ElevatorCli;
+use crate::controller::{ElevatorController, RandomController};
 
 //Import libraries
 use std::{thread, time};
@@ -38,13 +39,19 @@ fn main() {
     };
 
     //Initialize the building
-    let mut building = Building::from(
+    let building = Building::from(
         num_floors,
         num_elevators,
-        expected_arrivals, //Probability someone arrives
+        expected_arrivals,
         5.0_f64, //Base energy spent moving elevator up
         2.5_f64, //Base energy spent moving elevator down
         0.5_f64  //Coefficient for energy spent by moving N people
+    );
+
+    //Initialize the controller
+    let controller_rng = rand::thread_rng();
+    let mut controller = RandomController::from(
+        building, controller_rng
     );
 
     //Initialize the RNG and stdout
@@ -55,40 +62,24 @@ fn main() {
     let time_steps: i32 = 1000_i32;
     for i in 0..time_steps {
         //Generate people arriving and leaving
-        building.gen_people_arriving(&mut rng);
-        building.gen_people_leaving(&mut rng);
+        controller.building.gen_people_arriving(&mut rng);
+        controller.building.gen_people_leaving(&mut rng);
 
         //Move people on and off the elevators and out of the building
-        building.flush_first_floor();
-        building.exchange_people_on_elevator();
+        controller.building.flush_first_floor();
+        controller.building.exchange_people_on_elevator();
 
-        //Decide where to move next
-        let elevator_decisions: Vec<i32> = update_elevator(&mut building);
-
-        //Loop through the elevators and update their directions according to the decisions
-        for (i, decision) in elevator_decisions.iter().enumerate() {
-            if decision > &0_i32 {
-                building.elevators[i].stopped = false;
-                building.elevators[i].moving_up = true; //Move up
-            } else if decision < &0_i32 {
-                building.elevators[i].stopped = false;
-                building.elevators[i].moving_up = false; //Move down
-            } else {
-                building.elevators[i].stopped = true; //Stop
-            }
-
-            //Move the elevator and the people on the elevator from the current floor
-            let _new_floor_index = building.elevators[i].update_floor();
-        }
+        //Update the elevators
+        controller.update_elevators();
 
         //Increment the wait times, update average energy, update dest probabilities
-        let energy_spent: f64 = building.elevators.get_energy_spent();
-        building.increment_wait_times();
-        building.update_average_energy(i, energy_spent);
-        building.update_dest_probabilities();
+        let energy_spent: f64 = controller.building.elevators.get_energy_spent();
+        controller.building.increment_wait_times();
+        controller.building.update_average_energy(i, energy_spent);
+        controller.building.update_dest_probabilities();
 
         //Print the rendered building status
-        let building_str: String = String::from(building.to_string());
+        let building_str: String = String::from(controller.building.to_string());
         let building_str_len = building_str.matches("\n").count() as u16;
         let _ = stdout.write_all(building_str.as_bytes());
         stdout.flush().unwrap();
@@ -104,84 +95,4 @@ fn main() {
             stdout.queue(terminal::Clear(terminal::ClearType::FromCursorDown)).unwrap();
         }
     }
-}
-
-//Elevator logic function
-fn update_elevator(building: &mut Building) -> Vec<i32> {
-    //Initialize a vector of i32s representing the decisions made for each elevator
-    let mut elevator_decisions: Vec<i32> = Vec::new();
-
-    for elevator in building.elevators.iter() {
-        //If stopped, check where to go next
-        if elevator.stopped {
-            //Find the nearest destination floor among people on the elevator
-            let (nearest_dest_floor, min_dest_floor_dist): (usize, usize) = elevator.get_nearest_dest_floor();
-
-            //If the nearest dest floor is identified, then update the elevator
-            if min_dest_floor_dist != 0_usize {
-                //Unstop the elevator and move toward the nearest dest floor
-                if nearest_dest_floor > elevator.floor_on {
-                    elevator_decisions.push(1_i32);
-                    continue;
-                } else {
-                    elevator_decisions.push(-1_i32);
-                    continue;
-                }
-            }
-
-            //Find the nearest waiting floor among people throughout the building
-            let (nearest_wait_floor, min_wait_floor_dist): (usize, usize) = building.get_nearest_wait_floor(elevator.floor_on);
-
-            //If the nearest wait floor is identified, then update the elevator
-            if min_wait_floor_dist != 0_usize {
-                //Unstop the elevator and move toward the nearest dest floor
-                if nearest_wait_floor > elevator.floor_on {
-                    elevator_decisions.push(1_i32);
-                    continue;
-                } else {
-                    elevator_decisions.push(-1_i32);
-                    continue;
-                }
-            }
-        } else {
-            //If moving down and on the bottom floor, then stop
-            if !elevator.moving_up && elevator.floor_on == 0_usize {
-                elevator_decisions.push(0_i32);
-                continue;
-            }
-
-            //If moving up and on the top floor, then stop
-            if elevator.moving_up && elevator.floor_on == (building.floors.len() - 1_usize) {
-                elevator_decisions.push(0_i32);
-                continue;
-            }
-
-            //If there are people waiting on the current floor, then stop
-            if building.are_people_waiting_on_floor(elevator.floor_on) {
-                elevator_decisions.push(0_i32);
-                continue;
-            }
-
-            //If there are people waiting on the elevator for the current floor, then stop
-            if elevator.are_people_going_to_floor(elevator.floor_on) {
-                elevator_decisions.push(0_i32);
-                continue;
-            }
-        }
-
-        //If we make it this far without returning, then return the current state
-        if elevator.stopped {
-            elevator_decisions.push(0_i32);
-            continue;
-        } else if elevator.moving_up {
-            elevator_decisions.push(1_i32);
-            continue;
-        } else {
-            elevator_decisions.push(-1_i32);
-            continue;
-        }
-    }
-
-    //Return the vector of decisions
-    elevator_decisions
 }
